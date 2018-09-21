@@ -7,7 +7,7 @@ R = 1
 G = 2
 A = 1
 
-def newImg(size, depth, channel):
+def newImg(size, depth, channel): # 建立一个空图像
     if depth == 16:
         adepth = np.uint16
     else:
@@ -57,7 +57,7 @@ class cvImg:
     def save(self, path):
         cv2.imwrite(path, self.img)
 
-    def getCapture(self):
+    def getCapture(self): # 从摄像头获取数据
         cap = cv2.VideoCapture(0)
         success, frame = cap.read()
         if success:
@@ -75,7 +75,7 @@ class cvImg:
         cv2.line(self.img, start, end, color, width)
 
     def toGray(self):
-        self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+        cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         self.channels = 1
 
     def toBinarization(self, threshold, bigBlack = False):
@@ -87,7 +87,7 @@ class cvImg:
             ret, self.img = cv2.threshold(self.img, threshold, 255, cv2.THRESH_BINARY)
         self.channels = 0
 
-    def foreachColor(self, func):
+    def foreachColor(self, func): # 对每个像素执行func，func返回改像素修改后的值
         if self.channels == 1:
             for i in range(self.img.height):
                 for j in range(self.img.width):
@@ -134,22 +134,27 @@ class cvImg:
         return self.img[pos[0]][pos[1]][color]
 
     def blur(self, Range):
-        cv2.boxFilter(self.img, -1, Range)  # Range是二元组，十字大小
+        cv2.boxFilter(self.img, -1, Range)  # Range是二元组，方块滤波（模糊）窗口大小
 
     def sobelSketch(self):
         x = cv2.Sobel(self.img, cv2.CV_16S, 1, 0)
         y = cv2.Sobel(self.img, cv2.CV_16S, 0, 1)
         absX = cv2.convertScaleAbs(x)  # 转回uint8
         absY = cv2.convertScaleAbs(y)
-        self.img = cv2.addWeighted(absX, 0.5, absY, 0.5, 0)
+        cv2.addWeighted(absX, 0.5, absY, 0.5, 0)
+
+    def fusion(self,img2,ratio1,ratio2): # 图像融合
+        cv2.addWeighted(self.img, ratio1, img2, ratio2, 0.0)
 
     def edgeDetection(self, max, min):
-        self.img = cv2.GaussianBlur(self.img, (3, 3), 0)
-        if self.channels != 1:
+        self.img = cv2.GaussianBlur(self.img, (3, 3), 0) # 先做一个高斯滤波
+        if self.channels != 1: # 没转灰度就转灰度
             self.toGray()
-        self.img = cv2.Canny(self.img, min, max)
+        cv2.Canny(self.img, min, max) # 小阈值用来控制边缘连接，大的阈值用来控制强边缘的初始分割。即如果一个像素的
+                                      # 梯度大于上限值，则被认为是边缘像素，如果小于下限阈值，则被抛弃。如果该点
+                                      # 的梯度在两者之间则当这个点与高于上限值的像素点连接时我们才保留，否则删除。
 
-    def lineDetection(self, max, min, accurate):  # 直接在原图上画线，不改变颜色通道
+    def lineDetection(self, max, min, accurate):  # 基于霍夫变换的直线检测，直接在原图上画线，不改变颜色通道。accurate=True会使用概率霍夫变换
         edge = copy.copy(self)
         edge.edgeDetection(max, min)
 
@@ -179,7 +184,7 @@ class cvImg:
                 cv2.line(self.img, pt1, pt2, (255), 1)
 
     def equalization(self):
-        self.img = cv2.equalizeHist(self.img)
+        cv2.equalizeHist(self.img)
 
     def contourDetection(self, threshold, color):
         self.toBinarization(threshold)
